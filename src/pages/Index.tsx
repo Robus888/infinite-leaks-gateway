@@ -1,6 +1,10 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 const folders = [
   {
@@ -77,62 +81,151 @@ const folders = [
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showAuth, setShowAuth] = useState(true);
+  const [keyInput, setKeyInput] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const filteredFolders = folders.filter(folder => 
     folder.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  useEffect(() => {
+    const storedKey = localStorage.getItem('accessKey');
+    if (storedKey) {
+      validateKey(storedKey);
+    }
+  }, []);
+
+  const validateKey = async (keyValue: string) => {
+    try {
+      setLoading(true);
+      setError("");
+      
+      const { data, error } = await supabase
+        .from('access_keys')
+        .select('*')
+        .eq('key_value', keyValue)
+        .eq('is_valid', true)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        // Update the key's used_at and used_by_ip
+        const { error: updateError } = await supabase
+          .from('access_keys')
+          .update({ 
+            used_at: new Date().toISOString(),
+          })
+          .eq('id', data.id);
+
+        if (updateError) console.error('Error updating key usage:', updateError);
+
+        localStorage.setItem('accessKey', keyValue);
+        setShowAuth(false);
+      } else {
+        setError('Invalid access key');
+      }
+    } catch (error) {
+      console.error('Error validating key:', error);
+      setError('Invalid access key');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!keyInput.trim()) {
+      setError('Please enter an access key');
+      return;
+    }
+    validateKey(keyInput.trim());
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground p-6">
-      {/* Hero Section */}
-      <div className="text-center mb-12 animate-float">
-        <h1 className="text-5xl font-bold mb-4">Welcome to Infinite Leaks</h1>
-        <p className="text-xl text-gray-400">Your top source for pro content</p>
-      </div>
-
-      {/* Search Bar */}
-      <div className="max-w-xl mx-auto mb-12">
-        <div className="relative">
-          <Search className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search folders..."
-            className="w-full pl-12 pr-4 py-3 rounded-full bg-card text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* Grid Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
-        {filteredFolders.map((folder) => (
-          <div
-            key={folder.id}
-            className="bg-card rounded-lg overflow-hidden card-hover"
-          >
-            <div className="aspect-video relative overflow-hidden">
-              <img
-                src={folder.imageUrl}
-                alt={folder.title}
-                className="w-full h-full object-cover"
-                loading="lazy"
+    <div className="min-h-screen bg-background text-foreground p-6 relative">
+      {showAuth && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-md flex items-center justify-center z-50">
+          <div className="bg-card p-8 rounded-lg max-w-md w-[90%]">
+            <h2 className="text-2xl font-bold text-center mb-4">Access Required</h2>
+            <p className="text-gray-400 text-center mb-6">
+              Please enter your access key to continue
+            </p>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Input
+                type="text"
+                placeholder="Enter your access key"
+                value={keyInput}
+                onChange={(e) => setKeyInput(e.target.value)}
+                className="w-full"
               />
-            </div>
-            <div className="p-4">
-              <h3 className="text-lg font-semibold mb-2">{folder.title}</h3>
-              <p className="text-sm text-gray-400 mb-4">{folder.time}</p>
-              <a
-                href={folder.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block w-full bg-primary text-primary-foreground text-center py-2 rounded-md transition-all hover:bg-primary/90"
+              {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={loading}
               >
-                View Folder
-              </a>
-            </div>
+                {loading ? 'Validating...' : 'Submit'}
+              </Button>
+            </form>
           </div>
-        ))}
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className={showAuth ? 'hidden' : ''}>
+        {/* Hero Section */}
+        <div className="text-center mb-12 animate-float">
+          <h1 className="text-5xl font-bold mb-4">Welcome to Infinite Leaks</h1>
+          <p className="text-xl text-gray-400">Your top source for pro content</p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="max-w-xl mx-auto mb-12">
+          <div className="relative">
+            <Search className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search folders..."
+              className="w-full pl-12 pr-4 py-3 rounded-full bg-card text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Grid Layout */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
+          {filteredFolders.map((folder) => (
+            <div
+              key={folder.id}
+              className="bg-card rounded-lg overflow-hidden card-hover"
+            >
+              <div className="aspect-video relative overflow-hidden">
+                <img
+                  src={folder.imageUrl}
+                  alt={folder.title}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              </div>
+              <div className="p-4">
+                <h3 className="text-lg font-semibold mb-2">{folder.title}</h3>
+                <p className="text-sm text-gray-400 mb-4">{folder.time}</p>
+                <a
+                  href={folder.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block w-full bg-primary text-primary-foreground text-center py-2 rounded-md transition-all hover:bg-primary/90"
+                >
+                  View Folder
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
