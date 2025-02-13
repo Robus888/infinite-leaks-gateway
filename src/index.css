@@ -47,3 +47,33 @@
 .blur-backdrop {
   @apply bg-background/80 backdrop-blur-md;
 }
+
+/* Auth screen styles */
+.auth-screen {
+  @apply fixed inset-0 bg-background flex justify-center items-center z-50;
+}
+
+.auth-container {
+  @apply bg-card p-8 rounded-lg max-w-md w-[90%] text-center;
+}
+
+.key-input-container {
+  @apply my-6 flex gap-2;
+}
+
+.key-input-container input {
+  @apply flex-1 px-3 py-2 rounded-md bg-background text-foreground border border-border;
+}
+
+.key-input-container button {
+  @apply px-6 py-2 bg-primary text-primary-foreground border-none rounded-md cursor-pointer 
+         transition-colors hover:bg-primary/90;
+}
+
+.error-message {
+  @apply text-red-500 mt-2 text-sm;
+}
+
+.hidden {
+  @apply hidden;
+}

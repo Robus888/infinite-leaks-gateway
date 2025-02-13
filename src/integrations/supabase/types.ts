@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      access_keys: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_valid: boolean | null
+          key_value: string
+          used_at: string | null
+          used_by_ip: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_valid?: boolean | null
+          key_value: string
+          used_at?: string | null
+          used_by_ip?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_valid?: boolean | null
+          key_value?: string
+          used_at?: string | null
+          used_by_ip?: string | null
+        }
+        Relationships: []
+      }
       coinflip_games: {
         Row: {
           bet_amount: number
